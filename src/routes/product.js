@@ -1,14 +1,14 @@
 import { Router } from 'express';
-import * as productController from '@/controllers/product'; // Ensure this path and methods exist
+import * as productController from '@/controllers/product'; 
 
 
 const router = Router();
 
-router.get('/', productController.getProducts);  // Ensure `getAllProducts` is defined
-router.get('/:id', productController.getProductById); // Ensure `getProductById` is defined
-router.get('/filter', productController.filterProducts); // Ensure `filterProducts` is defined
-router.post('/', productController.createProduct); // Ensure `addProduct` is defined
-router.put('/:id', productController.updateProduct); // Ensure `updateProduct` is defined
-router.delete('/:id', productController.deleteProduct); // Ensure `deleteProduct` is defined
+router.get('/', productController.getProducts);  
+router.get('/:id', productController.getProductById);
+router.get('/filter', productController.filterProducts); 
+router.post('/', productController.createProduct); 
+router.put('/:id', productController.updateProduct); 
+router.delete('/:id', productController.deleteProduct); 
 
 export default router;
