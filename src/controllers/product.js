@@ -76,7 +76,7 @@ export const getProductById = async (req, res, next) => {
   try {
     const { id: productId } = req.params;
 
-    const cacheKey = `Product:${productId}`;
+    const cacheKey = `Product:${req.query.evalString}`;
 
     // Check cache
     redisClient.get(cacheKey, async (err, cachedData) => {

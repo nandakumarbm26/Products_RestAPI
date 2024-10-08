@@ -7,7 +7,7 @@ import compression from "compression";
 import createError from "http-errors";
 import cookieParser from "cookie-parser";
 import * as configs from "@/config";
-
+import performanceMonitor from "@/middleware/monitor";
 const app = express();
 
 // Required middleware list
@@ -17,7 +17,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cors(configs.corsConfig));
 app.use(compression(configs.compressionConfig));
 app.use(cookieParser());
-
+app.use(performanceMonitor("Product"));
 
 // Load router paths
 configs.routerConfig(app);
