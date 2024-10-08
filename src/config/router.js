@@ -1,5 +1,5 @@
-import productRouter from '@/routes/product'; // Ensure this path is correct
+import productRouter from "@/routes"; // Ensure this path is correct
 
 export default function (app) {
-  app.use('/products', productRouter);
+  app.use("/", productRouter);
 }

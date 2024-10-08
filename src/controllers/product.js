@@ -1,6 +1,7 @@
-import createError from 'http-errors';
-import db from '@/database';
-import redisClient from '@/libs/redis';
+import createError from "http-errors";
+import db from "@/database";
+import redisClient from "@/libs/redis";
+import { Sequelize } from "sequelize";
 
 /**
  * POST /products
@@ -15,7 +16,7 @@ export const createProduct = async (req, res, next) => {
 
     // Invalidate related caches
     if (redisClient.connected) {
-      redisClient.del('ProductsList');
+      redisClient.del("ProductsList");
     }
     return res.status(201).json(product);
   } catch (err) {
@@ -33,7 +34,7 @@ export const getProducts = async (req, res, next) => {
     const offset = (page - 1) * perPage;
 
     const cacheKey = `ProductsList:${page}:${perPage}`;
-    
+
     // Check cache
     redisClient.get(cacheKey, async (err, cachedData) => {
       if (err) return next(err);
@@ -45,7 +46,7 @@ export const getProducts = async (req, res, next) => {
       const productListResponse = await db.models.product.findAndCountAll({
         offset,
         limit: perPage,
-        order: [['createdAt', 'DESC']],
+        order: [["createdAt", "DESC"]],
       });
 
       const totalPage = Math.ceil(productListResponse.count / perPage);
@@ -76,7 +77,7 @@ export const getProductById = async (req, res, next) => {
     const { id: productId } = req.params;
 
     const cacheKey = `Product:${productId}`;
-    
+
     // Check cache
     redisClient.get(cacheKey, async (err, cachedData) => {
       if (err) return next(err);
@@ -85,9 +86,11 @@ export const getProductById = async (req, res, next) => {
         return res.status(200).json(JSON.parse(cachedData)); // Return cached response
       }
 
-      const product = await db.models.product.findOne({ where: { id: productId } });
+      const product = await db.models.product.findOne({
+        where: { id: productId },
+      });
       if (!product) {
-        return next(createError(404, 'There is no product with this id!'));
+        return next(createError(404, "There is no product with this id!"));
       }
 
       // Cache the product details
@@ -109,10 +112,22 @@ export const filterProducts = async (req, res, next) => {
   try {
     const { category, price_min, price_max } = req.query;
 
+    // Parse price_min and price_max to numbers
+    const parsedPriceMin = price_min ? parseInt(price_min, 10) : undefined;
+    const parsedPriceMax = price_max ? parseInt(price_max, 10) : undefined;
+
     const filterCriteria = {};
     if (category) filterCriteria.category = category;
-    if (price_min) filterCriteria.price = { $gte: price_min };
-    if (price_max) filterCriteria.price = { $lte: price_max };
+    if (parsedPriceMin !== undefined)
+      filterCriteria.price = {
+        ...filterCriteria.price,
+        [Sequelize.Op.gte]: parsedPriceMin,
+      };
+    if (parsedPriceMax !== undefined)
+      filterCriteria.price = {
+        ...filterCriteria.price,
+        [Sequelize.Op.lte]: parsedPriceMax,
+      };
 
     const cacheKey = `FilteredProducts:${JSON.stringify(filterCriteria)}`;
 
@@ -124,9 +139,10 @@ export const filterProducts = async (req, res, next) => {
         return res.json(JSON.parse(cachedData)); // Return cached response
       }
 
+      console.log("Querying the database...");
       const products = await db.models.product.findAll({
         where: filterCriteria,
-        order: [['createdAt', 'DESC']],
+        order: [["createdAt", "DESC"]],
       });
 
       // Cache the filtered response
@@ -136,6 +152,7 @@ export const filterProducts = async (req, res, next) => {
       return res.json(products);
     });
   } catch (err) {
+    console.error("Error occurred:", err);
     return next(err);
   }
 };
@@ -151,7 +168,7 @@ export const updateProduct = async (req, res, next) => {
 
     const product = await db.models.product.findByPk(productId);
     if (!product) {
-      return next(createError(404, 'There is no product with this id!'));
+      return next(createError(404, "There is no product with this id!"));
     }
 
     await product.update(productData);
@@ -159,9 +176,9 @@ export const updateProduct = async (req, res, next) => {
     // Invalidate the cache for this specific product
     if (redisClient.connected) {
       redisClient.del(`Product:${productId}`);
-      redisClient.del('ProductsList'); // Invalidate product list cache
+      redisClient.del("ProductsList"); // Invalidate product list cache
     }
-    
+
     return res.json(product);
   } catch (err) {
     return next(err);
@@ -178,7 +195,7 @@ export const deleteProduct = async (req, res, next) => {
 
     const product = await db.models.product.findByPk(productId);
     if (!product) {
-      return next(createError(404, 'There is no product with this id!'));
+      return next(createError(404, "There is no product with this id!"));
     }
 
     await product.destroy();
@@ -186,9 +203,9 @@ export const deleteProduct = async (req, res, next) => {
     // Invalidate the cache for this product
     if (redisClient.connected) {
       redisClient.del(`Product:${productId}`);
-      redisClient.del('ProductsList'); // Invalidate product list cache
+      redisClient.del("ProductsList"); // Invalidate product list cache
     }
-    
+
     return res.status(204).send();
   } catch (err) {
     return next(err);
